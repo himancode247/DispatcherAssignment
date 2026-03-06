@@ -1,0 +1,123 @@
+```apache
+#
+# Virtual Host configuration for mysite
+#
+
+Include conf.d/variables/custom.vars
+
+<VirtualHost *:80>
+
+    ServerName "mysite"
+    ServerAlias "*"
+
+    DocumentRoot "${DOCROOT}"
+
+    # Custom error page
+    ErrorDocument 404 /content/mysite/notfound.html
+
+    # URI dereferencing handled by Sling
+    AllowEncodedSlashes NoDecode
+
+    <IfModule mod_headers.c>
+        Header add X-Vhost "mysite"
+    </IfModule>
+
+    <IfModule mod_expires.c>
+        ExpiresActive Off
+    </IfModule>
+
+    <Directory />
+
+        <IfModule disp_apache2.c>
+            ModMimeUsePathInfo On
+            DirectorySlash Off
+            SetHandler dispatcher-handler
+        </IfModule>
+
+        Options FollowSymLinks
+        AllowOverride None
+
+        # Enable compression
+        SetOutputFilter DEFLATE
+
+        # Do not compress images
+        SetEnvIfNoCase Request_URI \.(?:gif|jpe?g|png)$ no-gzip dont-vary
+
+        # Security header
+        Header always append X-Frame-Options SAMEORIGIN
+
+    </Directory>
+
+    <Directory "${DOCROOT}">
+        AllowOverride None
+        Require all granted
+    </Directory>
+
+    <IfModule disp_apache2.c>
+        DispatcherUseProcessedURL On
+        DispatcherPassError 1
+    </IfModule>
+
+    # ----------------------------------------
+    # URL Rewrite Configuration
+    # ----------------------------------------
+
+    RewriteMap lc int:tolower
+    LogLevel rewrite:trace2
+
+    <IfModule mod_rewrite.c>
+        RewriteEngine on
+
+        # Force lowercase URLs internally
+        RewriteCond %{REQUEST_URI} [A-Z]
+        RewriteRule ^/(.*)$ /${lc:$1} [L,PT]
+
+        Include conf.d/rewrites/rewrite.rules
+
+        # Default index rule
+        RewriteRule "^(/?)$" "/index.html" [PT]
+    </IfModule>
+
+    # ----------------------------------------
+    # Security + Browser Caching
+    # ----------------------------------------
+
+    <IfModule mod_headers.c>
+
+        # Content Security Policy to allow external JS
+        Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://trusted.example.com https://untrusted-cdn.example.com https://code.jquery.com/jquery-3.7.1.min.js"
+
+        # -----------------------------
+        # HTML caching → 10 minutes
+        # -----------------------------
+        <LocationMatch "\.html$">
+            Header always unset Cache-Control
+            Header always unset Expires
+            Header always set Cache-Control "public, max-age=600"
+        </LocationMatch>
+
+        # -----------------------------
+        # Versioned clientlibs → 1 month
+        # -----------------------------
+        <LocationMatch "^/etc\.clientlibs/.*\.[0-9a-fA-F]{8,}\.(css|js)$">
+            Header always set Cache-Control "public, max-age=2592000, immutable"
+        </LocationMatch>
+
+        # -----------------------------
+        # Non-versioned clientlibs → 2 days
+        # -----------------------------
+        <LocationMatch "^/etc\.clientlibs/.*\.(css|js)$">
+            Header always set Cache-Control "public, max-age=172800"
+        </LocationMatch>
+
+        # -----------------------------
+        # Assets → 1 month
+        # -----------------------------
+        <LocationMatch "^/content/dam/.*\.(jpg|jpeg|png|gif|svg|webp|pdf|woff|woff2|ttf|mp4)$">
+            Header always set Cache-Control "public, max-age=2592000"
+        </LocationMatch>
+
+    </IfModule>
+
+</VirtualHost>
+```
