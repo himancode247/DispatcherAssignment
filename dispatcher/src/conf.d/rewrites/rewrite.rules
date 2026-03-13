@@ -1,0 +1,48 @@
+Include conf.d/rewrites/default_rewrite.rules
+
+RewriteEngine On
+
+# Root redirect
+RewriteRule ^/?$ /content/${CONTENT_FOLDER_NAME}/us/en.html [PT,L]
+
+#################################################
+# Blog Migration Redirect Rules
+#################################################
+
+RewriteCond %{QUERY_STRING} (^|&)lang=en(&|$)
+RewriteCond %{QUERY_STRING} (^|&)region=us(&|$)
+RewriteRule ^/articles/([^/]+)$ /content/mysite/us/en/blogs/$1.html? [R=301,L]
+
+RewriteCond %{QUERY_STRING} (^|&)lang=fr(&|$)
+RewriteCond %{QUERY_STRING} (^|&)region=ca(&|$)
+RewriteRule ^/articles/([^/]+)$ /content/mysite/ca/fr/blogs/$1.html? [R=301,L]
+
+RewriteRule ^/articles/([^/]+)$ /content/mysite/us/en/blogs/$1.html [R=301,L]
+
+#################################################
+# Lowercase URLs
+#################################################
+
+RewriteMap tolower int:tolower
+
+
+RewriteCond %{REQUEST_URI} [A-Z]
+RewriteRule (.*) ${tolower:$1} [PT,L]
+
+#################################################
+# Map friendly URL → content path
+#################################################
+
+RewriteCond %{REQUEST_URI} !^/apps
+RewriteCond %{REQUEST_URI} !^/bin
+RewriteCond %{REQUEST_URI} !^/content
+RewriteCond %{REQUEST_URI} !^/etc
+RewriteCond %{REQUEST_URI} !^/home
+RewriteCond %{REQUEST_URI} !^/libs
+RewriteCond %{REQUEST_URI} !^/saml_login
+RewriteCond %{REQUEST_URI} !^/system
+RewriteCond %{REQUEST_URI} !^/tmp
+RewriteCond %{REQUEST_URI} !^/var
+RewriteCond %{REQUEST_URI} !^/conf/(.+\.jpe?g|.+\.png|.+\.svg)$
+RewriteCond %{REQUEST_URI} (.html|.jpe?g|.png|.svg)$
+RewriteRule ^/(.*)$ /content/${CONTENT_FOLDER_NAME}/$1 [PT,L]
